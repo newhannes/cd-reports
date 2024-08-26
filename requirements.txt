@@ -1,6 +1,5 @@
 pandas
 requests 
-json
 us
 jinja
 streamlit
