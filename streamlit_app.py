@@ -168,27 +168,30 @@ var_lab_dict_immi = get_variables("https://api.census.gov/data/2022/acs/acs5/sub
 
 
 ### Get acs2022_1yr_selected_data
-var_prefix = "S0501"
-immigrant_vars = ["013E", "042E", "047E", "049E", "052E", "087E", "088E", "093E", "095E", "097E", "100E", "101E", "107E"]
-occupation_vars = [str(i).zfill(3) + "E" for i in range(61, 66)]
-groups = ["C02", 'C04', "C05"]
-vars = []
-for group in groups:
-    vars += [var_prefix + f"_{group}_" + var for var in immigrant_vars + occupation_vars]
-vars = vars + ["NAME"]
-url = "https://api.census.gov/data/2022/acs/acs5/subject?get=group(S0501)&ucgid=pseudo(0100000US$5000000)"
-response = requests.get(url)
-data = response.json()
-df_immi = pd.DataFrame(data)
-df_immi.columns = df_immi.iloc[0]
-df_immi = df_immi[1:]
-df_immi = df_immi[[col for col in df_immi.columns if col in vars]]
-df_immi["district"] = df_immi["NAME"].str.extract(r"(\d+)")[0].str.zfill(2) # select first number from the NAME column
-df_immi["state"] = df_immi["NAME"].str.extract(r",\s*(.+)$") # select all characters before the comma beginning at the end of the string
-df_immi["state_abbrev"] = df_immi["state"].apply(fips_to_state_name, abbr=True)
-df_immi["NAME"] = df_immi["state_abbrev"] + "-" + df_immi["district"]
-df_immi = df_immi[[col for col in df_immi.columns if col in vars]]
-
+@st.cache_data
+def immigrant_df():
+    var_prefix = "S0501"
+    immigrant_vars = ["013E", "042E", "047E", "049E", "052E", "087E", "088E", "093E", "095E", "097E", "100E", "101E", "107E"]
+    occupation_vars = [str(i).zfill(3) + "E" for i in range(61, 66)]
+    groups = ["C02", 'C04', "C05"]
+    vars = []
+    for group in groups:
+        vars += [var_prefix + f"_{group}_" + var for var in immigrant_vars + occupation_vars]
+    vars = vars + ["NAME"]
+    url = "https://api.census.gov/data/2022/acs/acs5/subject?get=group(S0501)&ucgid=pseudo(0100000US$5000000)"
+    response = requests.get(url)
+    data = response.json()
+    df_immi = pd.DataFrame(data)
+    df_immi.columns = df_immi.iloc[0]
+    df_immi = df_immi[1:]
+    df_immi = df_immi[[col for col in df_immi.columns if col in vars]]
+    df_immi["district"] = df_immi["NAME"].str.extract(r"(\d+)")[0].str.zfill(2) # select first number from the NAME column
+    df_immi["state"] = df_immi["NAME"].str.extract(r",\s*(.+)$") # select all characters before the comma beginning at the end of the string
+    df_immi["state_abbrev"] = df_immi["state"].apply(fips_to_state_name, abbr=True)
+    df_immi["NAME"] = df_immi["state_abbrev"] + "-" + df_immi["district"]
+    df_immi = df_immi[[col for col in df_immi.columns if col in vars]]
+    return df_immi
+df_immi = immigrant_df()
 
 df_natives = df_immi[["NAME"]+[col for col in df_immi.columns if "_C02_" in col]]
 df_foreign_cit = df_immi[["NAME"]+[col for col in df_immi.columns if "_C04_" in col]]
@@ -227,18 +230,6 @@ for df, rename_dict in zip(list_immi, rename_dicts):
     df.rename(columns=rename_dict, inplace=True)
     df.rename(columns={"Geographic Area Name": "NAME"}, inplace=True)
 
-
-## Create an html table for a given district that has each variable and its value for the three groups
-# def immigrant_comparison_table(district, df_native, df_foreign_cit, df_foreign_notcit):
-#     def process_df(df, column_name):
-#         processed_df = df.loc[df["NAME"] == district].drop(columns=["NAME"]).transpose()
-#         processed_df.columns = [column_name]
-#         return processed_df
-#     df_native = process_df(df_native, "Native")
-#     df_foreign_cit = process_df(df_foreign_cit, "Foreign born; Naturalized citizen")
-#     df_foreign_notcit = process_df(df_foreign_notcit, "Foreign born; Not a U.S. citizen")
-#     df = pd.concat([df_native, df_foreign_cit, df_foreign_notcit], axis=1).rename(columns={0: "Variable"})
-#     return df.to_html()
 
 
 ######### ========= Variables and Nicknames ========= ##########
@@ -298,18 +289,26 @@ df_vars["Type"] = df_vars["Label"].apply(lambda x: "Dollars" if "dollars" in x e
 ######## ========= Get Data and Clean Up ========= ########
 ### ACS1YR 2022 
 variables = all_vars_str
-df_raw = get_acs2022_1yr_profile_data(variables)
-df_raw['state_abbrev'] = df_raw["state"].apply(fips_to_state_name, abbr=True)
-df_raw['STATE'] = df_raw["state"].apply(fips_to_state_name)
+if "df_raw" not in st.session_state:
+    df_raw = get_acs2022_1yr_profile_data(variables)
+    df_raw['state_abbrev'] = df_raw["state"].apply(fips_to_state_name, abbr=True)
+    df_raw['STATE'] = df_raw["state"].apply(fips_to_state_name)
+    st.session_state.df_raw = df_raw
+else:
+    df_raw = st.session_state.df_raw
 df = df_raw.copy()
 df = clean_acs_data(df, census_variable_nicknames)
 
 
 ### ACS5YR 2020
 variables = all_vars_str
-df_raw_2020 = get_acs2020_5yr_profile_data(variables)
-df_raw_2020['state_abbrev'] = df_raw_2020["state"].apply(fips_to_state_name, abbr=True)
-df_raw_2020['STATE'] = df_raw_2020["state"].apply(fips_to_state_name)
+if "df_raw_2020" not in st.session_state:
+    df_raw_2020 = get_acs2020_5yr_profile_data(variables)
+    df_raw_2020['state_abbrev'] = df_raw_2020["state"].apply(fips_to_state_name, abbr=True)
+    df_raw_2020['STATE'] = df_raw_2020["state"].apply(fips_to_state_name)
+    st.session_state.df_raw_2020 = df_raw_2020
+else:
+    df_raw_2020 = st.session_state.df_raw_2020
 df_2020 = df_raw_2020.copy()
 df_2020 = clean_acs_data(df_2020, census_variable_nicknames)
 
