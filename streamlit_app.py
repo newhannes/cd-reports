@@ -50,6 +50,7 @@ from jinja2 import Template
 ## test
 ######### ======== Helper Functions ======= ##########
 ## MARK: Helper Functions
+@st.cache_data
 def get_acs2022_1yr_profile_data(variables, state="*", district="*"):
     try:
         url = f"https://api.census.gov/data/2022/acs/acs1/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}"
@@ -78,6 +79,7 @@ def get_variables(url):
         print(response.text)
         print(e)
 
+@st.cache_data
 def get_acs2020_5yr_profile_data(variables, state="*", district="*"):
     try:
         url = f"https://api.census.gov/data/2020/acs/acs5/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}"
@@ -501,7 +503,7 @@ def create_html_report(congressional_district, national_df, df2020, social_vars_
     return html_report
 
 
-
+st.title("Congressional District Report Generator")
 # User input for congressional district
 congressional_district = st.text_input("Enter Congressional District (e.g., NC-11):")
 
