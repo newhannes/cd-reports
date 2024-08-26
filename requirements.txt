@@ -1,5 +1,5 @@
 pandas
 requests 
 us
-jinja
+jinja2
 streamlit
