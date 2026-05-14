@@ -47,13 +47,18 @@ import json
 import pandas as pd
 import us
 from jinja2 import Template
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+CENSUS_API_KEY = os.environ["CENSUS_API_KEY"]
 ## test
 ######### ======== Helper Functions ======= ##########
 ## MARK: Helper Functions
 @st.cache_data
 def get_acs2022_1yr_profile_data(variables, state="*", district="*"):
     try:
-        url = f"https://api.census.gov/data/2022/acs/acs1/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}"
+        url = f"https://api.census.gov/data/2022/acs/acs1/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}&key={CENSUS_API_KEY}"
         response = requests.get(url)
         data = response.json()
         df = pd.DataFrame(data)
@@ -67,7 +72,7 @@ def get_acs2022_1yr_profile_data(variables, state="*", district="*"):
         print(e)
 
 def get_variables(url):
-    response = requests.get(url)
+    response = requests.get(url, params={"key": CENSUS_API_KEY})
     try:
         data = response.json()
         vars = data["variables"]
@@ -82,7 +87,7 @@ def get_variables(url):
 @st.cache_data
 def get_acs2020_5yr_profile_data(variables, state="*", district="*"):
     try:
-        url = f"https://api.census.gov/data/2020/acs/acs5/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}"
+        url = f"https://api.census.gov/data/2020/acs/acs5/profile?get={variables}&for=congressional%20district:{district}&in=state:{state}&key={CENSUS_API_KEY}"
         response = requests.get(url)
         data = response.json()
         df = pd.DataFrame(data)
@@ -178,7 +183,7 @@ def immigrant_df():
     for group in groups:
         vars += [var_prefix + f"_{group}_" + var for var in immigrant_vars + occupation_vars]
     vars = vars + ["NAME"]
-    url = "https://api.census.gov/data/2022/acs/acs5/subject?get=group(S0501)&ucgid=pseudo(0100000US$5000000)"
+    url = f"https://api.census.gov/data/2022/acs/acs5/subject?get=group(S0501)&ucgid=pseudo(0100000US$5000000)&key={CENSUS_API_KEY}"
     response = requests.get(url)
     data = response.json()
     df_immi = pd.DataFrame(data)

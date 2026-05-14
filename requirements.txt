@@ -1,5 +1,6 @@
 pandas
-requests 
+requests
 us
 jinja2
 streamlit
+python-dotenv
