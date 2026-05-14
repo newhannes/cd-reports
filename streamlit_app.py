@@ -47,11 +47,13 @@ import json
 import pandas as pd
 import us
 from jinja2 import Template
-from pathlib import Path
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-CENSUS_API_KEY = os.environ["CENSUS_API_KEY"]
+if "CENSUS_API_KEY" in st.secrets:
+    CENSUS_API_KEY = st.secrets["CENSUS_API_KEY"]
+else:
+    from pathlib import Path
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    CENSUS_API_KEY = os.environ["CENSUS_API_KEY"]
 ## test
 ######### ======== Helper Functions ======= ##########
 ## MARK: Helper Functions
